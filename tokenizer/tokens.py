@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import re
 import nltk
 import codecs
 import string
 import collections
+from tokenizer.tokenizer_helper import remove_apostrophe
+from tokenizer.tokenizer_helper import is_dashed_words
+
 from nltk.tokenize import RegexpTokenizer
 
 
@@ -50,28 +54,48 @@ def punc_tokenizer(tokens, word_tokens):
 
 
 def word_and_punctuation_tokenizer(tokens):
-    """Returns the list of all word tokens.
+    """Returns the list of word tokens and punctuation tokens separately.
 
     :param tokens: all tokens of the corpus
     :return: word list, punctuation list  -->list of all word tokens and punctuation tokens separately
     """
 
-    punctuation_tokens = list()
     punctuations = list(string.punctuation)
-    punctuations.append("''")
-    for i in range(len(tokens)):
-        if any(x in tokens[i] for x in punctuations):
-            punctuation_tokens.append(tokens[i])
+    punctuations.remove("'")
+    punctuations.remove("`")
 
-    # removes punctuation, and only words remain
-    word_tokens = tokens
-    word_tokens = [x for x in word_tokens if x not in punctuation_tokens]
+    word_tokens = list()
+    punctuation_tokens = list()
+    for token in tokens:
+        flag = True
+        # removes apostrophe
+        token = remove_apostrophe(token)
+        for punctuation in punctuations:
+            if punctuation in token:
+                flag = False
+                break
+        if flag:
+            word_tokens.append(token)
+        else:
+            punctuation_tokens.append(token)
 
-    # tokens = nltk.word_tokenize(raw_data)
-    # words = [i.strip("".join(punctuations)) for i in tokens if i not in punctuations]
-    print('number of words: {0}'.format(len(tokens)))
-    print('number of distinct words: {0}'.format(len(set(tokens))))
-    print('number of distinct words: {0}\n'.format(len(nltk.FreqDist(tokens).keys())))
+    # TODO: "aldı.Aksam" tarzinda noktali cumlelerin punctuationdan alinip word kategorisine eklenmesi.
+
+    for token in punctuation_tokens: # TODO: "galatasaray-besiktas" tarzindaki punctuationlarin word kategorisine eklenmesi.
+        if is_dashed_words(token):
+            word_tokens.append(token)
+            # TODO: punctuationdan cikarilacak. Verilen indexteki eleman cikarilacak.
+
+    # TODO: "28.12.2012" tarzindaki tarihlerin punctuationdan alinip word kategorisine eklenmesi.
+    # TODO: "2010/2011" tarzindaki tarihlerin punctuationdan alinip word kategorisine eklenmesi.
+    # TODO: "05:30" tarzindaki saatlerin punctuationdan alinip word kategorisine eklenmesi.
+    # TODO: "1.85" şeklindeki sayilarin punctuationdan alinip word kategorisine eklenmesi.
+    # TODO: "1." "2." şeklinde sayilarin punctuationdan alinip word kategorisine eklenmesi.
+
+
+    print('number of words: {0}'.format(len(word_tokens)))
+    print('number of distinct words: {0}'.format(len(set(word_tokens))))
+    print('number of distinct words: {0}\n'.format(len(nltk.FreqDist(word_tokens).keys())))
 
     print('number of punctuations: {0}'.format(len(punctuation_tokens)))
     print('number of distinct punctuations: {0}'.format(len(set(punctuation_tokens))))
@@ -126,28 +150,30 @@ def main():
 
     :return: counts tokens for each type. Prints tokens to files. And prints console outputs to file.
     """
+
+    # 42binhaber_segmented_sentence.txt nuve tarafindan olusturulmus her line bir cumle yapisidir.
     fp = codecs.open("/home/joker/nltk_data/corpora/gutenberg/42binhaber_segmented_sentence.txt", 'r', 'utf-8')
     raw_data = fp.read()
 
     # splits sentences
     sentences = sentence_tokenizer(raw_data)
-    write_list_to_file("sentences.txt", sentences)
+    write_list_to_file("output/sentences.txt", sentences)
     # write duplicated sentences
     duplicated_sentences = [item for item, count in collections.Counter(sentences).items() if count > 1]
-    write_list_to_file("duplicated_sentences.txt", duplicated_sentences)
-
+    write_list_to_file("output/duplicated_sentences.txt", duplicated_sentences)
 
     # split tokens
     tokens = tokenizer(sentences)
-    write_list_to_file("all_tokens.txt", tokens)
+    write_list_to_file("output/all_tokens.txt", tokens)
 
     # split word tokens
+    # TODO: noktalama ve kelime tokenization kodu yazilacak...
     word_tokens, punctuation_tokens = word_and_punctuation_tokenizer(tokens)
-    write_list_to_file("word_tokens.txt", word_tokens)
+    write_list_to_file("output/word_tokens.txt", word_tokens)
 
     # split punctuation tokens
     # punc_tokens = punc_tokenizer(tokens, word_tokens)
-    write_list_to_file("punctuation_tokens.txt", punctuation_tokens)
+    write_list_to_file("output/punctuation_tokens.txt", punctuation_tokens)
 
 
 if __name__ == '__main__':
