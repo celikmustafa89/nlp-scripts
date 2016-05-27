@@ -7,6 +7,9 @@ import string
 import collections
 from tokenizer.tokenizer_helper import remove_apostrophe
 from tokenizer.tokenizer_helper import is_dashed_words
+from tokenizer.tokenizer_helper import separate_dashed_words
+from tokenizer.tokenizer_helper import is_date
+from tokenizer.tokenizer_helper import get_date
 
 from nltk.tokenize import RegexpTokenizer
 
@@ -56,6 +59,12 @@ def punc_tokenizer(tokens, word_tokens):
 def word_and_punctuation_tokenizer(tokens):
     """Returns the list of word tokens and punctuation tokens separately.
 
+    Kelime ve noktalama belirlenirken izlenen adimlar:
+    1- kesme isareti kaldirilarak, kelime ve eki bitisik yaziliyor.
+    2- tire ile ayrilmis iki kelime ayri iki kelime olarak aliniyor.
+    3- kelime.kelime seklindeki kelimeler kelime, nokta ve kelime olarak 3 farklı sekilde aliniyor.
+    4-
+
     :param tokens: all tokens of the corpus
     :return: word list, punctuation list  -->list of all word tokens and punctuation tokens separately
     """
@@ -66,6 +75,7 @@ def word_and_punctuation_tokenizer(tokens):
 
     word_tokens = list()
     punctuation_tokens = list()
+    poor_punctuation_tokens = list()
     for token in tokens:
         flag = True
         # removes apostrophe
@@ -77,21 +87,28 @@ def word_and_punctuation_tokenizer(tokens):
         if flag:
             word_tokens.append(token)
         else:
-            punctuation_tokens.append(token)
+            poor_punctuation_tokens.append(token)
 
     # TODO: "aldı.Aksam" tarzinda noktali cumlelerin punctuationdan alinip word kategorisine eklenmesi.
 
-    for token in punctuation_tokens: # TODO: "galatasaray-besiktas" tarzindaki punctuationlarin word kategorisine eklenmesi.
-        if is_dashed_words(token):
-            word_tokens.append(token)
+    for token in poor_punctuation_tokens:
+
+        # TODO: "28.12.2012" tarzindaki tarihlerin punctuationdan alinip word kategorisine eklenmesi.
+        if is_date(token):
+            extracted_token = get_date(token)
+            token = token.replace(extracted_token, "")
+        if is_dashed_words(token):  # dash ile ayrilmissa farkli kelimeler olarak word_tokens'a ekleniyor.
+            dashed_word_tokens = separate_dashed_words(token)
+            word_tokens.extend(dashed_word_tokens)
+        else:
+            punctuation_tokens.append(token)
+
             # TODO: punctuationdan cikarilacak. Verilen indexteki eleman cikarilacak.
 
-    # TODO: "28.12.2012" tarzindaki tarihlerin punctuationdan alinip word kategorisine eklenmesi.
     # TODO: "2010/2011" tarzindaki tarihlerin punctuationdan alinip word kategorisine eklenmesi.
     # TODO: "05:30" tarzindaki saatlerin punctuationdan alinip word kategorisine eklenmesi.
     # TODO: "1.85" şeklindeki sayilarin punctuationdan alinip word kategorisine eklenmesi.
     # TODO: "1." "2." şeklinde sayilarin punctuationdan alinip word kategorisine eklenmesi.
-
 
     print('number of words: {0}'.format(len(word_tokens)))
     print('number of distinct words: {0}'.format(len(set(word_tokens))))
